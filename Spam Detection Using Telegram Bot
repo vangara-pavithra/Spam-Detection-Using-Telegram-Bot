@@ -1,0 +1,48 @@
+!pip install pyTelegramBotAPI
+
+import pandas as pd
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+import telebot
+
+# Step 1: Load and preprocess the dataset
+data = pd.read_csv("/content/spam.csv", encoding='latin1')
+text = data["v2"]
+labels = data["v1"]
+
+# Preprocessing text data
+text = text.str.encode('utf-8', 'ignore').str.decode('utf-8', 'ignore')
+
+# Step 2: Feature extraction using CountVectorizer
+vectorizer = CountVectorizer()
+features = vectorizer.fit_transform(text)
+
+# Step 3: Train the Naive Bayes classifier
+classifier = MultinomialNB()
+classifier.fit(features, labels)
+
+# Create a Telegram bot
+bot_token = '6877182552:AAFsFP5wWzTFYfwhTm468RTZ1wnscnxw5pY'  # Replace with your actual bot token
+bot = telebot.TeleBot(bot_token)
+
+# Handle '/start' command
+@bot.message_handler(commands=['start'])
+def handle_start(message):
+    bot.reply_to(message, "Welcome to the Spam Detection Bot! Send me a message to classify.")
+
+# Handle user messages
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    question = message.text
+    # Feature extraction for the user's input
+    user_input = vectorizer.transform([question])
+
+    # Predict the class (spam or ham) of the user's input
+    prediction = classifier.predict(user_input)
+
+    # Provide the answer based on the prediction
+    answer = "Spam" if prediction[0] == "spam" else "Ham"
+    bot.reply_to(message, f"Prediction: {answer}")
+
+# Start the bot
+bot.polling()
